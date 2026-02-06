@@ -1575,12 +1575,70 @@ function killAISnake(aiSnake, currentTime) {
     aiSnake.alive = false;
     aiSnake.respawnTime = currentTime;
 
-    aiSnake.segments.forEach(seg => {
+    // Spawn dragon meat at each body segment
+    aiSnake.segments.forEach((seg, index) => {
         const worldPos = gridToWorld(seg);
         createParticle(new THREE.Vector3(worldPos.x, 0, worldPos.z), aiSnake.color.body, 8, true);
+
+        // Create dragon meat food at this position
+        spawnDragonMeat(seg, aiSnake.color);
     });
 
     updateAISnakeMeshes(aiSnake);
+}
+
+// Create dragon meat food from killed AI dragon
+function spawnDragonMeat(pos, dragonColor) {
+    const group = new THREE.Group();
+
+    // Dragon meat core - glowing orb with dragon's color
+    const coreGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const coreMaterial = new THREE.MeshBasicMaterial({
+        color: dragonColor.body,
+        transparent: true,
+        opacity: 0.9
+    });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    group.add(core);
+
+    // Inner glow
+    const glowGeometry = new THREE.SphereGeometry(0.4, 12, 12);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: dragonColor.head,
+        transparent: true,
+        opacity: 0.5
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    group.add(glow);
+
+    // Outer glow
+    const outerGlowGeometry = new THREE.SphereGeometry(0.55, 8, 8);
+    const outerGlowMaterial = new THREE.MeshBasicMaterial({
+        color: dragonColor.body,
+        transparent: true,
+        opacity: 0.25
+    });
+    const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial);
+    group.add(outerGlow);
+
+    // Point light
+    const light = new THREE.PointLight(dragonColor.body, 0.8, 5);
+    light.position.set(0, 0.3, 0);
+    group.add(light);
+
+    const worldPos = gridToWorld(pos);
+    group.position.set(worldPos.x, 0.5, worldPos.z);
+    scene.add(group);
+
+    gameState.foods.push({
+        x: pos.x,
+        z: pos.z,
+        isGolden: false,
+        isDragonMeat: true,
+        dragonColor: dragonColor,
+        spawnTime: Date.now(),
+        mesh: group
+    });
 }
 
 function respawnAISnake(aiSnake) {
@@ -2146,14 +2204,15 @@ function moveSnake() {
         });
     }
 
-    // 检查吃食物
+    // Check food eating
     let ateFood = false;
     for (let i = 0; i < gameState.foods.length; i++) {
         const food = gameState.foods[i];
         if (newHead.x === food.x && newHead.z === food.z) {
             ateFood = true;
 
-            let points = food.isGolden ? 30 : 10;
+            // Dragon meat gives 20 points, golden 30, regular 10
+            let points = food.isDragonMeat ? 20 : (food.isGolden ? 30 : 10);
 
             const now = Date.now();
             if (now - gameState.lastFoodTime < 3000) {
@@ -2173,11 +2232,19 @@ function moveSnake() {
             gameState.baseSpeed = Math.max(CONFIG.minSpeed, gameState.baseSpeed - CONFIG.speedIncrease);
 
             const worldPos = gridToWorld(newHead);
-            // 恒星爆发粒子效果
+
+            // Particle effect with appropriate color
+            let particleColor = food.isGolden ? 0xffdd44 : 0xff6633;
+            let particleCount = food.isGolden ? 25 : 15;
+            if (food.isDragonMeat) {
+                particleColor = food.dragonColor.body;
+                particleCount = 20;
+                showNotification(`Devoured dragon! +${points} 🍖`, food.dragonColor.head);
+            }
             createParticle(
                 new THREE.Vector3(worldPos.x, 0.5, worldPos.z),
-                food.isGolden ? 0xffdd44 : 0xff6633,
-                food.isGolden ? 25 : 15
+                particleColor,
+                particleCount
             );
 
             if (gameState.combo > 0) {
@@ -2198,8 +2265,8 @@ function moveSnake() {
                 showNotification(`${gameState.foodEaten}! Unstoppable! 🐉`, 0xff4500);
             }
 
-            // 随机鼓励
-            if (Math.random() < 0.15) {
+            // Random encouragement
+            if (Math.random() < 0.15 && !food.isDragonMeat) {
                 setTimeout(() => {
                     showNotification(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)], 0x4ade80);
                 }, 300);
@@ -2207,7 +2274,11 @@ function moveSnake() {
 
             scene.remove(food.mesh);
             gameState.foods.splice(i, 1);
-            spawnFood();
+
+            // Only spawn new food for regular/golden stars, not dragon meat
+            if (!food.isDragonMeat) {
+                spawnFood();
+            }
 
             updateScore();
             break;
@@ -2416,13 +2487,23 @@ function animate(currentTime) {
             gameState.lastPowerUpSpawn = currentTime;
         }
 
-        gameState.foods.forEach((food, index) => {
-            if (food.isGolden && Date.now() - food.spawnTime > CONFIG.goldenFoodTimeout) {
+        // Remove expired food (golden stars and dragon meat)
+        for (let i = gameState.foods.length - 1; i >= 0; i--) {
+            const food = gameState.foods[i];
+            const elapsed = Date.now() - food.spawnTime;
+
+            // Golden food expires after goldenFoodTimeout
+            if (food.isGolden && elapsed > CONFIG.goldenFoodTimeout) {
                 scene.remove(food.mesh);
-                gameState.foods.splice(index, 1);
+                gameState.foods.splice(i, 1);
                 spawnFood();
             }
-        });
+            // Dragon meat expires after 10 seconds
+            else if (food.isDragonMeat && elapsed > 10000) {
+                scene.remove(food.mesh);
+                gameState.foods.splice(i, 1);
+            }
+        }
 
         // 道具动画
         gameState.powerUps.forEach(p => {
@@ -2443,8 +2524,15 @@ function animate(currentTime) {
             const pulse = 1 + Math.sin(currentTime * 0.008 + food.x * 0.5) * 0.1;
             food.mesh.scale.setScalar(pulse);
 
+            // Blinking effect when food is about to expire
             if (food.isGolden) {
                 const remaining = CONFIG.goldenFoodTimeout - (Date.now() - food.spawnTime);
+                if (remaining < 2000) {
+                    food.mesh.visible = Math.floor(currentTime / 100) % 2 === 0;
+                }
+            }
+            if (food.isDragonMeat) {
+                const remaining = 10000 - (Date.now() - food.spawnTime);
                 if (remaining < 2000) {
                     food.mesh.visible = Math.floor(currentTime / 100) % 2 === 0;
                 }
