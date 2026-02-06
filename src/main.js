@@ -250,10 +250,18 @@ scene.add(dragonLight);
 const particles = [];
 const fireParticles = [];
 
-function createParticle(position, color, count = 10, isFireParticle = false) {
-    const geometry = new THREE.SphereGeometry(isFireParticle ? 0.15 : 0.1, 8, 8);
+// 共享粒子几何体
+const particleGeometry = new THREE.SphereGeometry(0.1, 6, 6);
+const fireParticleGeometry = new THREE.SphereGeometry(0.15, 6, 6);
 
-    for (let i = 0; i < count; i++) {
+function createParticle(position, color, count = 10, isFireParticle = false) {
+    // 限制总粒子数
+    if (particles.length > 100) return;
+
+    const geometry = isFireParticle ? fireParticleGeometry : particleGeometry;
+    const actualCount = Math.min(count, 15); // 限制每次创建数量
+
+    for (let i = 0; i < actualCount; i++) {
         const material = new THREE.MeshBasicMaterial({
             color,
             transparent: true,
@@ -262,9 +270,9 @@ function createParticle(position, color, count = 10, isFireParticle = false) {
         const particle = new THREE.Mesh(geometry, material);
         particle.position.copy(position);
         particle.velocity = new THREE.Vector3(
-            (Math.random() - 0.5) * (isFireParticle ? 0.5 : 0.3),
-            Math.random() * 0.3 + (isFireParticle ? 0.2 : 0.1),
-            (Math.random() - 0.5) * (isFireParticle ? 0.5 : 0.3)
+            (Math.random() - 0.5) * (isFireParticle ? 0.4 : 0.25),
+            Math.random() * 0.25 + 0.1,
+            (Math.random() - 0.5) * (isFireParticle ? 0.4 : 0.25)
         );
         particle.life = 1.0;
         particle.isFireParticle = isFireParticle;
@@ -335,10 +343,17 @@ function updateParticles() {
     }
 }
 
-// ==================== 宇宙事件系统 ====================
+// ==================== 宇宙事件系统（优化版）====================
 const cosmicEventParticles = [];
 
-// 超新星爆发效果
+// 共享几何体 - 避免重复创建
+const sharedGeometries = {
+    smallSphere: new THREE.SphereGeometry(0.15, 6, 6),
+    mediumSphere: new THREE.SphereGeometry(0.5, 8, 8),
+    ring: new THREE.RingGeometry(0.5, 1, 16),
+};
+
+// 超新星爆发效果（优化版）
 function triggerSupernova() {
     const pos = getValidPosition();
     const worldPos = gridToWorld(pos);
@@ -346,8 +361,8 @@ function triggerSupernova() {
 
     showNotification('💥 超新星爆发！', COSMIC_EVENTS.SUPERNOVA.color);
 
-    // 创建超新星核心
-    const coreGeometry = new THREE.SphereGeometry(1, 32, 32);
+    // 创建超新星核心 - 使用低多边形
+    const coreGeometry = new THREE.SphereGeometry(1, 12, 12);
     const coreMaterial = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
@@ -356,48 +371,42 @@ function triggerSupernova() {
     const core = new THREE.Mesh(coreGeometry, coreMaterial);
     core.position.copy(center);
     scene.add(core);
-    gameState.eventMeshes.push({ mesh: core, type: 'supernova', startTime: Date.now(), duration: 3000 });
+    gameState.eventMeshes.push({ mesh: core, type: 'supernova', startTime: Date.now(), duration: 2000 });
 
-    // 创建爆发波
-    for (let ring = 0; ring < 3; ring++) {
-        setTimeout(() => {
-            const ringGeometry = new THREE.RingGeometry(0.5, 1, 32);
-            const ringMaterial = new THREE.MeshBasicMaterial({
-                color: [0xffff00, 0xff8800, 0xff4400][ring],
-                transparent: true,
-                opacity: 0.8,
-                side: THREE.DoubleSide
-            });
-            const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
-            ringMesh.position.copy(center);
-            ringMesh.rotation.x = -Math.PI / 2;
-            scene.add(ringMesh);
-            gameState.eventMeshes.push({
-                mesh: ringMesh,
-                type: 'supernova_ring',
-                startTime: Date.now(),
-                duration: 2000,
-                expandSpeed: 0.8 + ring * 0.3
-            });
-        }, ring * 200);
-    }
+    // 只创建1个爆发波（减少3个到1个）
+    const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffaa00,
+        transparent: true,
+        opacity: 0.7,
+        side: THREE.DoubleSide
+    });
+    const ringMesh = new THREE.Mesh(sharedGeometries.ring, ringMaterial);
+    ringMesh.position.copy(center);
+    ringMesh.rotation.x = -Math.PI / 2;
+    scene.add(ringMesh);
+    gameState.eventMeshes.push({
+        mesh: ringMesh,
+        type: 'supernova_ring',
+        startTime: Date.now(),
+        duration: 1500,
+        expandSpeed: 1.2
+    });
 
-    // 大量粒子爆发
-    for (let i = 0; i < 100; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 0.3 + Math.random() * 0.5;
-        const colors = [0xffff00, 0xff8800, 0xff4400, 0xffffff];
-        const geometry = new THREE.SphereGeometry(0.15 + Math.random() * 0.1, 8, 8);
+    // 减少粒子数量（100 -> 20）并分批创建
+    const colors = [0xffff00, 0xff8800, 0xff4400];
+    for (let i = 0; i < 20; i++) {
+        const angle = (i / 20) * Math.PI * 2;
+        const speed = 0.4;
         const material = new THREE.MeshBasicMaterial({
-            color: colors[Math.floor(Math.random() * colors.length)],
+            color: colors[i % 3],
             transparent: true,
             opacity: 1
         });
-        const particle = new THREE.Mesh(geometry, material);
+        const particle = new THREE.Mesh(sharedGeometries.smallSphere, material);
         particle.position.copy(center);
         particle.velocity = new THREE.Vector3(
             Math.cos(angle) * speed,
-            (Math.random() - 0.3) * 0.3,
+            0.1,
             Math.sin(angle) * speed
         );
         particle.life = 1.0;
@@ -405,7 +414,7 @@ function triggerSupernova() {
         cosmicEventParticles.push(particle);
     }
 
-    // 超新星效果：杀死范围内的AI蛇，给玩家加分
+    // 超新星效果：杀死范围内的AI蛇
     setTimeout(() => {
         const blastRadius = 20;
         let killCount = 0;
@@ -413,52 +422,46 @@ function triggerSupernova() {
         gameState.aiSnakes.forEach(ai => {
             if (!ai.alive) return;
             const aiPos = gridToWorld(ai.segments[0]);
-            const dist = Math.sqrt(
-                Math.pow(aiPos.x - worldPos.x, 2) +
-                Math.pow(aiPos.z - worldPos.z, 2)
-            );
-            if (dist < blastRadius) {
+            const dx = aiPos.x - worldPos.x;
+            const dz = aiPos.z - worldPos.z;
+            if (dx * dx + dz * dz < blastRadius * blastRadius) {
                 killAISnake(ai, performance.now());
                 killCount++;
             }
         });
 
         if (killCount > 0) {
-            const bonus = killCount * 100;
-            gameState.score += bonus;
+            gameState.score += killCount * 100;
             gameState.aiKills += killCount;
-            showNotification(`超新星消灭 ${killCount} 条龙！+${bonus}`, 0xff4400);
+            showNotification(`超新星消灭 ${killCount} 条龙！+${killCount * 100}`, 0xff4400);
             updateScore();
         }
 
-        // 在爆炸区域生成额外食物
-        for (let i = 0; i < 5; i++) {
+        // 生成额外食物（减少到3个）
+        for (let i = 0; i < 3; i++) {
             spawnFood();
         }
-        showNotification('恒星遗迹出现！', 0xffdd00);
-    }, 500);
+    }, 400);
 }
 
-// 黑洞效果
+// 黑洞效果（优化版）
 function triggerBlackHole() {
     const pos = getValidPosition();
     const worldPos = gridToWorld(pos);
 
-    showNotification('🕳️ 黑洞出现！小心被吞噬！', COSMIC_EVENTS.BLACK_HOLE.color);
+    showNotification('🕳️ 黑洞出现！', COSMIC_EVENTS.BLACK_HOLE.color);
 
-    // 创建黑洞视觉效果
+    // 创建简化的黑洞视觉效果
     const blackHoleGroup = new THREE.Group();
 
-    // 事件视界（黑色核心）
-    const eventHorizonGeometry = new THREE.SphereGeometry(1.5, 32, 32);
-    const eventHorizonMaterial = new THREE.MeshBasicMaterial({
-        color: 0x000000
-    });
+    // 事件视界（黑色核心）- 低多边形
+    const eventHorizonGeometry = new THREE.SphereGeometry(1.5, 12, 12);
+    const eventHorizonMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const eventHorizon = new THREE.Mesh(eventHorizonGeometry, eventHorizonMaterial);
     blackHoleGroup.add(eventHorizon);
 
-    // 吸积盘
-    const diskGeometry = new THREE.RingGeometry(2, 4, 64);
+    // 吸积盘 - 减少面数
+    const diskGeometry = new THREE.RingGeometry(2, 4, 24);
     const diskMaterial = new THREE.MeshBasicMaterial({
         color: 0xff4400,
         transparent: true,
@@ -469,47 +472,39 @@ function triggerBlackHole() {
     disk.rotation.x = -Math.PI / 2.5;
     blackHoleGroup.add(disk);
 
-    // 外围光晕
-    for (let i = 0; i < 3; i++) {
-        const glowGeometry = new THREE.RingGeometry(4 + i, 5 + i, 32);
-        const glowMaterial = new THREE.MeshBasicMaterial({
-            color: [0x6600ff, 0x4400aa, 0x220066][i],
-            transparent: true,
-            opacity: 0.3 - i * 0.08,
-            side: THREE.DoubleSide
-        });
-        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-        glow.rotation.x = -Math.PI / 2;
-        blackHoleGroup.add(glow);
-    }
+    // 只保留1个光晕（减少3个到1个）
+    const glowGeometry = new THREE.RingGeometry(4, 5.5, 16);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: 0x6600ff,
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    glow.rotation.x = -Math.PI / 2;
+    blackHoleGroup.add(glow);
 
     blackHoleGroup.position.set(worldPos.x, 1, worldPos.z);
     scene.add(blackHoleGroup);
 
-    const blackHole = {
+    gameState.blackHoles.push({
         mesh: blackHoleGroup,
         gridPos: pos,
         worldPos: new THREE.Vector3(worldPos.x, 1, worldPos.z),
         startTime: Date.now(),
         duration: COSMIC_EVENTS.BLACK_HOLE.duration,
-        radius: 15 // 引力影响范围
-    };
-    gameState.blackHoles.push(blackHole);
-
-    // 黑洞点光源（紫色）
-    const blackHoleLight = new THREE.PointLight(0x6600ff, 3, 25);
-    blackHoleLight.position.set(0, 0, 0);
-    blackHoleGroup.add(blackHoleLight);
+        radius: 12,
+        lastParticleTime: 0
+    });
 }
 
-// 更新黑洞效果
+// 更新黑洞效果（优化版）
 function updateBlackHoles(currentTime) {
     for (let i = gameState.blackHoles.length - 1; i >= 0; i--) {
         const bh = gameState.blackHoles[i];
         const elapsed = Date.now() - bh.startTime;
 
         if (elapsed > bh.duration) {
-            // 黑洞消失
             scene.remove(bh.mesh);
             gameState.blackHoles.splice(i, 1);
             showNotification('黑洞消散了', 0x6644aa);
@@ -517,36 +512,35 @@ function updateBlackHoles(currentTime) {
         }
 
         // 旋转吸积盘
-        bh.mesh.children[1].rotation.z += 0.05;
-        bh.mesh.rotation.y += 0.02;
+        bh.mesh.children[1].rotation.z += 0.03;
+        bh.mesh.rotation.y += 0.01;
 
-        // 黑洞吸引效果 - 吸引食物
-        gameState.foods.forEach(food => {
+        // 每5帧才检测一次吸引效果（降低CPU负载）
+        if (Math.floor(currentTime / 80) % 5 !== 0) continue;
+
+        // 黑洞吸引食物（简化逻辑）
+        for (let j = gameState.foods.length - 1; j >= 0; j--) {
+            const food = gameState.foods[j];
             const foodWorld = gridToWorld(food);
             const dx = bh.worldPos.x - foodWorld.x;
             const dz = bh.worldPos.z - foodWorld.z;
-            const dist = Math.sqrt(dx * dx + dz * dz);
+            const distSq = dx * dx + dz * dz;
 
-            if (dist < bh.radius && dist > 2) {
-                // 被吸引
-                const force = 0.15 / (dist * 0.5);
-                const newX = food.x + Math.sign(dx) * (Math.random() < force ? 1 : 0);
-                const newZ = food.z + Math.sign(dz) * (Math.random() < force ? 1 : 0);
-
-                if (newX >= 0 && newX < CONFIG.gridSize && newZ >= 0 && newZ < CONFIG.gridSize) {
-                    food.x = newX;
-                    food.z = newZ;
-                    const newWorldPos = gridToWorld(food);
-                    food.mesh.position.x = newWorldPos.x;
-                    food.mesh.position.z = newWorldPos.z;
-                }
-            } else if (dist <= 2) {
+            if (distSq <= 4) {
                 // 被吞噬
                 scene.remove(food.mesh);
-                gameState.foods = gameState.foods.filter(f => f !== food);
-                createParticle(bh.worldPos, 0x6600ff, 10);
+                gameState.foods.splice(j, 1);
+            } else if (distSq < bh.radius * bh.radius && Math.random() < 0.2) {
+                // 被吸引
+                food.x += Math.sign(dx);
+                food.z += Math.sign(dz);
+                food.x = Math.max(0, Math.min(CONFIG.gridSize - 1, food.x));
+                food.z = Math.max(0, Math.min(CONFIG.gridSize - 1, food.z));
+                const newWorldPos = gridToWorld(food);
+                food.mesh.position.x = newWorldPos.x;
+                food.mesh.position.z = newWorldPos.z;
             }
-        });
+        }
 
         // 黑洞吸引AI蛇
         gameState.aiSnakes.forEach(ai => {
@@ -554,61 +548,46 @@ function updateBlackHoles(currentTime) {
             const aiWorld = gridToWorld(ai.segments[0]);
             const dx = bh.worldPos.x - aiWorld.x;
             const dz = bh.worldPos.z - aiWorld.z;
-            const dist = Math.sqrt(dx * dx + dz * dz);
-
-            if (dist <= 3) {
-                // AI被吞噬
+            if (dx * dx + dz * dz <= 9) {
                 killAISnake(ai, performance.now());
                 gameState.score += 80;
                 gameState.aiKills++;
-                showNotification(`黑洞吞噬了 ${ai.color.name}！+80`, 0x6600ff);
+                showNotification(`黑洞吞噬 ${ai.color.name}！+80`, 0x6600ff);
                 updateScore();
-                createParticle(bh.worldPos, ai.color.body, 20);
             }
         });
 
-        // 玩家与黑洞的交互
-        if (gameState.snake.length > 0) {
+        // 玩家与黑洞交互
+        if (gameState.snake.length > 0 && hasEffect('invincible')) {
             const head = gameState.snake[0];
             const headWorld = gridToWorld(head);
             const dx = bh.worldPos.x - headWorld.x;
             const dz = bh.worldPos.z - headWorld.z;
-            const dist = Math.sqrt(dx * dx + dz * dz);
-
-            if (dist <= 3) {
-                if (hasEffect('invincible')) {
-                    // 无敌状态下获得大量分数
-                    gameState.score += 200;
-                    showNotification('征服黑洞！+200', 0xffd700);
-                    updateScore();
-                    scene.remove(bh.mesh);
-                    gameState.blackHoles.splice(i, 1);
-                    // 爆发粒子
-                    for (let j = 0; j < 50; j++) {
-                        createParticle(bh.worldPos, 0xffd700, 5);
-                    }
-                }
-                // 非无敌状态下不会死亡，只是被推开
+            if (dx * dx + dz * dz <= 9) {
+                gameState.score += 200;
+                showNotification('征服黑洞！+200', 0xffd700);
+                updateScore();
+                scene.remove(bh.mesh);
+                gameState.blackHoles.splice(i, 1);
+                createParticle(bh.worldPos, 0xffd700, 10);
             }
         }
 
-        // 创建吸引粒子效果
-        if (Math.random() < 0.3) {
+        // 大幅减少粒子生成频率
+        if (currentTime - bh.lastParticleTime > 500 && cosmicEventParticles.length < 30) {
+            bh.lastParticleTime = currentTime;
             const angle = Math.random() * Math.PI * 2;
-            const dist = bh.radius * (0.5 + Math.random() * 0.5);
-            const particlePos = new THREE.Vector3(
-                bh.worldPos.x + Math.cos(angle) * dist,
-                Math.random() * 2,
-                bh.worldPos.z + Math.sin(angle) * dist
-            );
-            const geometry = new THREE.SphereGeometry(0.1, 8, 8);
             const material = new THREE.MeshBasicMaterial({
-                color: Math.random() < 0.5 ? 0x6600ff : 0xff4400,
+                color: 0x6600ff,
                 transparent: true,
-                opacity: 0.8
+                opacity: 0.7
             });
-            const particle = new THREE.Mesh(geometry, material);
-            particle.position.copy(particlePos);
+            const particle = new THREE.Mesh(sharedGeometries.smallSphere, material);
+            particle.position.set(
+                bh.worldPos.x + Math.cos(angle) * 8,
+                1,
+                bh.worldPos.z + Math.sin(angle) * 8
+            );
             particle.targetPos = bh.worldPos.clone();
             particle.life = 1.0;
             particle.isBlackHoleParticle = true;
@@ -618,47 +597,40 @@ function updateBlackHoles(currentTime) {
     }
 }
 
-// 流星雨
+// 流星雨（优化版）
 function triggerMeteorShower() {
-    showNotification('☄️ 流星雨来袭！恒星掉落！', COSMIC_EVENTS.METEOR_SHOWER.color);
+    showNotification('☄️ 流星雨！', COSMIC_EVENTS.METEOR_SHOWER.color);
 
-    const meteorCount = 8 + Math.floor(Math.random() * 5);
+    // 减少流星数量（8-13 -> 4-6）
+    const meteorCount = 4 + Math.floor(Math.random() * 3);
+
+    // 共享几何体
+    const meteorGeometry = new THREE.SphereGeometry(0.4, 8, 8);
+    const tailGeometry = new THREE.ConeGeometry(0.3, 1.5, 6);
 
     for (let i = 0; i < meteorCount; i++) {
+        // 增加间隔时间，分散创建压力
         setTimeout(() => {
-            // 随机位置生成流星
             const targetPos = getValidPosition();
             const targetWorld = gridToWorld(targetPos);
 
-            // 创建流星
             const meteorGroup = new THREE.Group();
 
-            const meteorGeometry = new THREE.SphereGeometry(0.4, 16, 16);
-            const meteorMaterial = new THREE.MeshBasicMaterial({
-                color: 0xff6644,
-                emissive: 0xff4422
-            });
+            const meteorMaterial = new THREE.MeshBasicMaterial({ color: 0xff6644 });
             const meteor = new THREE.Mesh(meteorGeometry, meteorMaterial);
             meteorGroup.add(meteor);
 
-            // 流星尾巴
-            const tailGeometry = new THREE.ConeGeometry(0.3, 2, 8);
             const tailMaterial = new THREE.MeshBasicMaterial({
                 color: 0xffaa44,
                 transparent: true,
-                opacity: 0.6
+                opacity: 0.5
             });
             const tail = new THREE.Mesh(tailGeometry, tailMaterial);
             tail.rotation.x = Math.PI;
-            tail.position.y = 1.2;
+            tail.position.y = 1;
             meteorGroup.add(tail);
 
-            // 从高空落下
-            meteorGroup.position.set(
-                targetWorld.x + (Math.random() - 0.5) * 20,
-                50,
-                targetWorld.z + (Math.random() - 0.5) * 20
-            );
+            meteorGroup.position.set(targetWorld.x, 40, targetWorld.z);
             meteorGroup.targetPos = new THREE.Vector3(targetWorld.x, 0.5, targetWorld.z);
             meteorGroup.targetGridPos = targetPos;
             scene.add(meteorGroup);
@@ -667,9 +639,9 @@ function triggerMeteorShower() {
                 mesh: meteorGroup,
                 type: 'meteor',
                 startTime: Date.now(),
-                duration: 2000
+                duration: 1500
             });
-        }, i * 300);
+        }, i * 400);
     }
 }
 
@@ -726,158 +698,132 @@ function triggerWormhole() {
 }
 
 function createWormholeEffect(worldPos, color) {
-    // 创建虫洞漩涡
-    for (let i = 0; i < 3; i++) {
-        const ringGeometry = new THREE.RingGeometry(0.5 + i * 0.8, 1 + i * 0.8, 32);
-        const ringMaterial = new THREE.MeshBasicMaterial({
-            color: color,
-            transparent: true,
-            opacity: 0.7 - i * 0.2,
-            side: THREE.DoubleSide
-        });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.position.set(worldPos.x, 0.5 + i * 0.3, worldPos.z);
-        ring.rotation.x = -Math.PI / 2;
-        scene.add(ring);
+    // 只创建1个虫洞环（减少3个到1个）
+    const ringGeometry = new THREE.RingGeometry(0.8, 2, 16);
+    const ringMaterial = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide
+    });
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.position.set(worldPos.x, 0.5, worldPos.z);
+    ring.rotation.x = -Math.PI / 2;
+    scene.add(ring);
 
-        gameState.eventMeshes.push({
-            mesh: ring,
-            type: 'wormhole',
-            startTime: Date.now(),
-            duration: 1500,
-            rotateSpeed: 0.2 - i * 0.05
-        });
-    }
+    gameState.eventMeshes.push({
+        mesh: ring,
+        type: 'wormhole',
+        startTime: Date.now(),
+        duration: 1200,
+        rotateSpeed: 0.15
+    });
 
-    // 粒子效果
-    for (let i = 0; i < 30; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = Math.random() * 2;
-        const geometry = new THREE.SphereGeometry(0.08, 8, 8);
+    // 减少粒子（30 -> 8）
+    for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
         const material = new THREE.MeshBasicMaterial({
             color: color,
             transparent: true,
-            opacity: 1
+            opacity: 0.8
         });
-        const particle = new THREE.Mesh(geometry, material);
+        const particle = new THREE.Mesh(sharedGeometries.smallSphere, material);
         particle.position.set(
-            worldPos.x + Math.cos(angle) * radius,
-            0.5 + Math.random() * 2,
-            worldPos.z + Math.sin(angle) * radius
+            worldPos.x + Math.cos(angle) * 1.5,
+            0.5,
+            worldPos.z + Math.sin(angle) * 1.5
         );
-        particle.velocity = new THREE.Vector3(
-            (Math.random() - 0.5) * 0.2,
-            0.1 + Math.random() * 0.2,
-            (Math.random() - 0.5) * 0.2
-        );
+        particle.velocity = new THREE.Vector3(0, 0.15, 0);
         particle.life = 1.0;
         scene.add(particle);
         cosmicEventParticles.push(particle);
     }
 }
 
-// 恒星祝福
+// 恒星祝福（优化版）
 function triggerStellarBlessing() {
-    showNotification('✨ 恒星祝福降临！', COSMIC_EVENTS.STELLAR_BLESSING.color);
+    showNotification('✨ 恒星祝福！+100', COSMIC_EVENTS.STELLAR_BLESSING.color);
 
-    // 给玩家加分和临时增益
     gameState.score += 100;
     gameState.activeEffects.double_score = Date.now() + 10000;
     updateScore();
 
-    // 生成额外食物
-    for (let i = 0; i < 8; i++) {
+    // 减少食物生成（8 -> 4）
+    for (let i = 0; i < 4; i++) {
         spawnFood();
     }
 
-    // 创建祝福光柱效果
+    // 只创建1个光柱（减少5个到1个）
     if (gameState.snake.length > 0) {
         const head = gameState.snake[0];
         const worldPos = gridToWorld(head);
 
-        for (let i = 0; i < 5; i++) {
-            const beamGeometry = new THREE.CylinderGeometry(0.1, 0.3, 20, 8);
-            const beamMaterial = new THREE.MeshBasicMaterial({
-                color: 0xffdd00,
-                transparent: true,
-                opacity: 0.4
-            });
-            const beam = new THREE.Mesh(beamGeometry, beamMaterial);
-            beam.position.set(
-                worldPos.x + (Math.random() - 0.5) * 5,
-                10,
-                worldPos.z + (Math.random() - 0.5) * 5
-            );
-            scene.add(beam);
+        const beamGeometry = new THREE.CylinderGeometry(0.2, 0.5, 15, 6);
+        const beamMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffdd00,
+            transparent: true,
+            opacity: 0.35
+        });
+        const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+        beam.position.set(worldPos.x, 8, worldPos.z);
+        scene.add(beam);
 
-            gameState.eventMeshes.push({
-                mesh: beam,
-                type: 'blessing',
-                startTime: Date.now(),
-                duration: 2000
-            });
-        }
+        gameState.eventMeshes.push({
+            mesh: beam,
+            type: 'blessing',
+            startTime: Date.now(),
+            duration: 1500
+        });
 
-        // 金色粒子
-        for (let i = 0; i < 50; i++) {
-            createParticle(
-                new THREE.Vector3(worldPos.x, 5, worldPos.z),
-                0xffdd00,
-                1
-            );
-        }
+        // 减少粒子（50 -> 10）
+        createParticle(new THREE.Vector3(worldPos.x, 3, worldPos.z), 0xffdd00, 10);
     }
 
-    setTimeout(() => {
-        showNotification('双倍积分 10秒！', 0xffdd00);
-    }, 500);
+    setTimeout(() => showNotification('双倍积分 10秒！', 0xffdd00), 400);
 }
 
-// 宇宙风暴
+// 宇宙风暴（优化版）
 function triggerCosmicStorm() {
-    showNotification('🌪️ 宇宙风暴来袭！', COSMIC_EVENTS.COSMIC_STORM.color);
+    showNotification('🌪️ 宇宙风暴！', COSMIC_EVENTS.COSMIC_STORM.color);
 
-    // 风暴效果：所有AI蛇减速，玩家加速
     gameState.activeEffects.speed_boost = Date.now() + 6000;
 
     gameState.aiSnakes.forEach(ai => {
-        ai.speed = ai.speed * 1.5; // AI减速
+        ai.speed = ai.speed * 1.5;
     });
 
-    // 创建风暴视觉效果
+    // 减少粒子（20 -> 8）
     const stormCenter = gameState.snake.length > 0 ? gridToWorld(gameState.snake[0]) : { x: 0, z: 0 };
 
-    for (let i = 0; i < 20; i++) {
-        const angle = (i / 20) * Math.PI * 2;
-        const radius = 10 + Math.random() * 10;
-        const geometry = new THREE.SphereGeometry(0.3, 8, 8);
+    for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const radius = 8 + Math.random() * 5;
         const material = new THREE.MeshBasicMaterial({
             color: 0x8844ff,
             transparent: true,
-            opacity: 0.6
+            opacity: 0.5
         });
-        const particle = new THREE.Mesh(geometry, material);
+        const particle = new THREE.Mesh(sharedGeometries.smallSphere, material);
         particle.position.set(
             stormCenter.x + Math.cos(angle) * radius,
-            1 + Math.random() * 5,
+            1 + Math.random() * 3,
             stormCenter.z + Math.sin(angle) * radius
         );
         particle.orbitCenter = new THREE.Vector3(stormCenter.x, 0, stormCenter.z);
         particle.orbitRadius = radius;
         particle.orbitAngle = angle;
-        particle.orbitSpeed = 0.02 + Math.random() * 0.02;
+        particle.orbitSpeed = 0.03;
         particle.life = 1.0;
         particle.isStormParticle = true;
         scene.add(particle);
         cosmicEventParticles.push(particle);
     }
 
-    // 风暴结束后恢复AI速度
     setTimeout(() => {
         gameState.aiSnakes.forEach(ai => {
             ai.speed = CONFIG.aiSpeed + Math.random() * 60;
         });
-        showNotification('风暴平息了', 0x8844ff);
+        showNotification('风暴平息', 0x8844ff);
     }, 6000);
 }
 
@@ -937,30 +883,28 @@ function updateCosmicEvents(currentTime) {
             case 'meteor':
                 // 流星落下
                 if (event.mesh.position.y > 0.5) {
-                    event.mesh.position.lerp(event.mesh.targetPos, 0.08);
-                    event.mesh.rotation.x += 0.1;
+                    event.mesh.position.lerp(event.mesh.targetPos, 0.1);
+                    event.mesh.rotation.x += 0.08;
                 } else if (!event.landed) {
                     event.landed = true;
                     // 落地生成食物
                     const pos = event.mesh.targetGridPos;
-                    if (pos) {
-                        const existingFood = gameState.foods.find(f => f.x === pos.x && f.z === pos.z);
-                        if (!existingFood) {
-                            const mesh = createStarModel(Math.random() < 0.5);
-                            const worldPos = gridToWorld(pos);
-                            mesh.position.set(worldPos.x, 0.5, worldPos.z);
-                            scene.add(mesh);
-                            gameState.foods.push({
-                                x: pos.x,
-                                z: pos.z,
-                                isGolden: Math.random() < 0.5,
-                                spawnTime: Date.now(),
-                                mesh
-                            });
-                        }
+                    if (pos && !gameState.foods.find(f => f.x === pos.x && f.z === pos.z)) {
+                        const isGolden = Math.random() < 0.5;
+                        const mesh = createStarModel(isGolden);
+                        const worldPos = gridToWorld(pos);
+                        mesh.position.set(worldPos.x, 0.5, worldPos.z);
+                        scene.add(mesh);
+                        gameState.foods.push({
+                            x: pos.x,
+                            z: pos.z,
+                            isGolden,
+                            spawnTime: Date.now(),
+                            mesh
+                        });
                     }
-                    // 落地粒子效果
-                    createParticle(event.mesh.position, 0xff6644, 15);
+                    // 减少落地粒子（15 -> 5）
+                    createParticle(event.mesh.position, 0xff6644, 5);
                 }
                 break;
 
@@ -981,29 +925,30 @@ function updateCosmicEvents(currentTime) {
     // 更新黑洞
     updateBlackHoles(currentTime);
 
-    // 更新宇宙事件粒子
+    // 更新宇宙事件粒子（优化版 - 限制数量和加速衰减）
+    // 如果粒子过多，加速清理
+    const fastDecay = cosmicEventParticles.length > 50;
+
     for (let i = cosmicEventParticles.length - 1; i >= 0; i--) {
         const p = cosmicEventParticles[i];
+        const decayRate = fastDecay ? 0.05 : 0.025;
 
         if (p.isBlackHoleParticle && p.targetPos) {
-            // 被吸向黑洞
-            p.position.lerp(p.targetPos, 0.05);
-            p.life -= 0.02;
+            p.position.lerp(p.targetPos, 0.08);
+            p.life -= decayRate;
         } else if (p.isStormParticle) {
-            // 风暴旋转
             p.orbitAngle += p.orbitSpeed;
             p.position.x = p.orbitCenter.x + Math.cos(p.orbitAngle) * p.orbitRadius;
             p.position.z = p.orbitCenter.z + Math.sin(p.orbitAngle) * p.orbitRadius;
-            p.position.y += (Math.random() - 0.5) * 0.1;
-            p.life -= 0.008;
+            p.life -= 0.012;
         } else {
             p.position.add(p.velocity);
-            p.velocity.y -= 0.005;
-            p.life -= 0.02;
+            p.velocity.y -= 0.008;
+            p.life -= decayRate;
         }
 
         p.material.opacity = p.life;
-        p.scale.setScalar(p.life);
+        p.scale.setScalar(Math.max(0.1, p.life));
 
         if (p.life <= 0) {
             scene.remove(p);
@@ -2524,8 +2469,9 @@ function animate(currentTime) {
         updateCosmicEvents(currentTime);
 
         // 随机触发宇宙事件（每15-30秒一次）
-        if (currentTime - gameState.lastEventTime > 15000 + Math.random() * 15000) {
-            if (Math.random() < 0.7) { // 70%概率触发
+        // 宇宙事件触发间隔增加（减少卡顿）
+        if (currentTime - gameState.lastEventTime > 25000 + Math.random() * 20000) {
+            if (Math.random() < 0.6) { // 60%概率触发
                 triggerRandomCosmicEvent();
             }
             gameState.lastEventTime = currentTime;
