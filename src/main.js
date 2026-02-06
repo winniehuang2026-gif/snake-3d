@@ -1,71 +1,71 @@
 import * as THREE from 'three';
 
-// ==================== 游戏配置 ====================
+// ==================== Game Configuration ====================
 const CONFIG = {
-    gridSize: 100,             // 超大地图
+    gridSize: 100,             // Large map
     cellSize: 1,
-    initialSpeed: 150,         // 更慢更友好的速度
-    speedIncrease: 0.5,        // 速度增加更慢
-    minSpeed: 80,              // 最快速度限制
-    powerUpDuration: 12000,    // 道具持续更长时间！
-    powerUpSpawnInterval: 1500, // 道具生成更频繁！
-    obstacleCount: 10,         // 减少障碍物
-    goldenFoodChance: 0.35,    // 更多金色食物！
-    goldenFoodTimeout: 15000,  // 金色食物持续更久
+    initialSpeed: 150,         // Friendly starting speed
+    speedIncrease: 0.5,        // Gradual speed increase
+    minSpeed: 80,              // Maximum speed limit
+    powerUpDuration: 12000,    // Long power-up duration
+    powerUpSpawnInterval: 1500, // Frequent power-up spawns
+    obstacleCount: 10,         // Obstacle count
+    goldenFoodChance: 0.35,    // Golden food chance
+    goldenFoodTimeout: 15000,  // Golden food duration
 
-    // AI蛇配置
-    aiSnakeCount: 6,           // 减少AI蛇
-    aiSpeed: 200,              // AI更慢
-    aiRandomness: 0.25,        // AI更傻
-    foodCount: 30,             // 超多食物！
+    // AI Snake config
+    aiSnakeCount: 6,           // AI snake count
+    aiSpeed: 200,              // AI speed
+    aiRandomness: 0.25,        // AI randomness
+    foodCount: 30,             // Food count
 };
 
-// ==================== AI蛇颜色 ====================
+// ==================== AI Dragon Colors ====================
 const AI_COLORS = [
-    { head: 0xe11d48, body: 0xfb7185, name: '红龙' },
-    { head: 0x7c3aed, body: 0xa78bfa, name: '紫龙' },
-    { head: 0x0891b2, body: 0x22d3ee, name: '冰龙' },
-    { head: 0xf59e0b, body: 0xfbbf24, name: '金龙' },
+    { head: 0xe11d48, body: 0xfb7185, name: 'Red Dragon' },
+    { head: 0x7c3aed, body: 0xa78bfa, name: 'Purple Dragon' },
+    { head: 0x0891b2, body: 0x22d3ee, name: 'Ice Dragon' },
+    { head: 0xf59e0b, body: 0xfbbf24, name: 'Gold Dragon' },
 ];
 
-// ==================== 道具类型 ====================
+// ==================== Power-up Types ====================
 const POWER_UP_TYPES = {
-    SPEED_BOOST: { name: '加速', color: 0xff6b6b, effect: 'speed_boost', icon: '⚡', weight: 10 },
-    SLOW_MO: { name: '减速', color: 0x4ecdc4, effect: 'slow_mo', icon: '🐢', weight: 15 },
-    INVINCIBLE: { name: '无敌', color: 0xffe66d, effect: 'invincible', icon: '⭐', weight: 20 },
-    DOUBLE_SCORE: { name: '双倍', color: 0xa855f7, effect: 'double_score', icon: '✖2', weight: 15 },
-    SHRINK: { name: '缩身', color: 0x22d3ee, effect: 'shrink', icon: '📉', weight: 10 },
-    MAGNET: { name: '磁铁', color: 0xec4899, effect: 'magnet', icon: '🧲', weight: 15 },
-    FIRE_BREATH: { name: '龙息', color: 0xff4500, effect: 'fire_breath', icon: '🔥', weight: 20 },
-    SHIELD: { name: '护盾', color: 0x3b82f6, effect: 'shield', icon: '🛡️', weight: 15 },
-    BONUS: { name: '奖励', color: 0x10b981, effect: 'bonus', icon: '🎁', weight: 15 },
-    REVERSE: { name: '反转', color: 0x6b7280, effect: 'reverse', icon: '🔄', weight: 3 },
-    BOMB: { name: '炸弹', color: 0x1f2937, effect: 'bomb', icon: '💣', weight: 2 }
+    SPEED_BOOST: { name: 'Speed', color: 0xff6b6b, effect: 'speed_boost', icon: '⚡', weight: 10 },
+    SLOW_MO: { name: 'Slow', color: 0x4ecdc4, effect: 'slow_mo', icon: '🐢', weight: 15 },
+    INVINCIBLE: { name: 'Invincible', color: 0xffe66d, effect: 'invincible', icon: '⭐', weight: 20 },
+    DOUBLE_SCORE: { name: 'Double', color: 0xa855f7, effect: 'double_score', icon: '✖2', weight: 15 },
+    SHRINK: { name: 'Shrink', color: 0x22d3ee, effect: 'shrink', icon: '📉', weight: 10 },
+    MAGNET: { name: 'Magnet', color: 0xec4899, effect: 'magnet', icon: '🧲', weight: 15 },
+    FIRE_BREATH: { name: 'Fire', color: 0xff4500, effect: 'fire_breath', icon: '🔥', weight: 20 },
+    SHIELD: { name: 'Shield', color: 0x3b82f6, effect: 'shield', icon: '🛡️', weight: 15 },
+    BONUS: { name: 'Bonus', color: 0x10b981, effect: 'bonus', icon: '🎁', weight: 15 },
+    REVERSE: { name: 'Reverse', color: 0x6b7280, effect: 'reverse', icon: '🔄', weight: 3 },
+    BOMB: { name: 'Bomb', color: 0x1f2937, effect: 'bomb', icon: '💣', weight: 2 }
 };
 
-// 鼓励语句
+// Encouragement messages
 const ENCOURAGEMENTS = [
-    '太棒了！🎉',
-    '你真厉害！💪',
-    '继续加油！🔥',
-    '无敌！⭐',
-    '完美！✨',
-    '漂亮！👏',
-    '厉害了！🏆',
-    '龙神附体！🐉',
+    'Awesome! 🎉',
+    'Amazing! 💪',
+    'Keep going! 🔥',
+    'Unstoppable! ⭐',
+    'Perfect! ✨',
+    'Nice one! 👏',
+    'Incredible! 🏆',
+    'Dragon Power! 🐉',
 ];
 
-// ==================== 宇宙事件类型 ====================
+// ==================== Cosmic Event Types ====================
 const COSMIC_EVENTS = {
-    SUPERNOVA: { name: '超新星爆发', icon: '💥', color: 0xffaa00, duration: 3000 },
-    BLACK_HOLE: { name: '黑洞出现', icon: '🕳️', color: 0x330066, duration: 8000 },
-    METEOR_SHOWER: { name: '流星雨', icon: '☄️', color: 0xff6644, duration: 5000 },
-    WORMHOLE: { name: '虫洞传送', icon: '🌀', color: 0x00ffff, duration: 2000 },
-    STELLAR_BLESSING: { name: '恒星祝福', icon: '✨', color: 0xffdd00, duration: 1000 },
-    COSMIC_STORM: { name: '宇宙风暴', icon: '🌪️', color: 0x8844ff, duration: 6000 },
+    SUPERNOVA: { name: 'Supernova', icon: '💥', color: 0xffaa00, duration: 3000 },
+    BLACK_HOLE: { name: 'Black Hole', icon: '🕳️', color: 0x330066, duration: 8000 },
+    METEOR_SHOWER: { name: 'Meteor Shower', icon: '☄️', color: 0xff6644, duration: 5000 },
+    WORMHOLE: { name: 'Wormhole', icon: '🌀', color: 0x00ffff, duration: 2000 },
+    STELLAR_BLESSING: { name: 'Stellar Blessing', icon: '✨', color: 0xffdd00, duration: 1000 },
+    COSMIC_STORM: { name: 'Cosmic Storm', icon: '🌪️', color: 0x8844ff, duration: 6000 },
 };
 
-// ==================== 游戏状态 ====================
+// ==================== Game State ====================
 const gameState = {
     snake: [],
     direction: { x: 1, y: 0, z: 0 },
@@ -87,14 +87,14 @@ const gameState = {
     combo: 0,
     lastFoodTime: 0,
     aiKills: 0,
-    // 宇宙事件
+    // Cosmic events
     lastEventTime: 0,
     activeEvent: null,
     blackHoles: [],
     eventMeshes: [],
 };
 
-// ==================== Three.js 设置 ====================
+// ==================== Three.js Setup ====================
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050510);
 scene.fog = new THREE.Fog(0x050510, 80, 200);
@@ -114,7 +114,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
-// ==================== 宇宙星云背景 ====================
+// ==================== Space Nebula Background ====================
 function createStarField() {
     // 创建星星
     const starCount = 3000;
@@ -227,7 +227,7 @@ function createNebula() {
 const starField = createStarField();
 createNebula();
 
-// ==================== 灯光 ====================
+// ==================== Lighting ====================
 const ambientLight = new THREE.AmbientLight(0x6666aa, 0.3);
 scene.add(ambientLight);
 
@@ -246,7 +246,7 @@ scene.add(directionalLight);
 const dragonLight = new THREE.PointLight(0xff6600, 3, 20);
 scene.add(dragonLight);
 
-// ==================== 粒子系统 ====================
+// ==================== Particle System ====================
 const particles = [];
 const fireParticles = [];
 
@@ -343,7 +343,7 @@ function updateParticles() {
     }
 }
 
-// ==================== 宇宙事件系统（优化版）====================
+// ==================== Cosmic Events System (Optimized) ====================
 const cosmicEventParticles = [];
 
 // 共享几何体 - 避免重复创建
@@ -359,7 +359,7 @@ function triggerSupernova() {
     const worldPos = gridToWorld(pos);
     const center = new THREE.Vector3(worldPos.x, 2, worldPos.z);
 
-    showNotification('💥 超新星爆发！', COSMIC_EVENTS.SUPERNOVA.color);
+    showNotification('💥 Supernova!', COSMIC_EVENTS.SUPERNOVA.color);
 
     // 创建超新星核心 - 使用低多边形
     const coreGeometry = new THREE.SphereGeometry(1, 12, 12);
@@ -433,7 +433,7 @@ function triggerSupernova() {
         if (killCount > 0) {
             gameState.score += killCount * 100;
             gameState.aiKills += killCount;
-            showNotification(`超新星消灭 ${killCount} 条龙！+${killCount * 100}`, 0xff4400);
+            showNotification(`Supernova killed ${killCount} dragons! +${killCount * 100}`, 0xff4400);
             updateScore();
         }
 
@@ -449,7 +449,7 @@ function triggerBlackHole() {
     const pos = getValidPosition();
     const worldPos = gridToWorld(pos);
 
-    showNotification('🕳️ 黑洞出现！', COSMIC_EVENTS.BLACK_HOLE.color);
+    showNotification('🕳️ Black Hole!', COSMIC_EVENTS.BLACK_HOLE.color);
 
     // 创建简化的黑洞视觉效果
     const blackHoleGroup = new THREE.Group();
@@ -507,7 +507,7 @@ function updateBlackHoles(currentTime) {
         if (elapsed > bh.duration) {
             scene.remove(bh.mesh);
             gameState.blackHoles.splice(i, 1);
-            showNotification('黑洞消散了', 0x6644aa);
+            showNotification('Black Hole vanished', 0x6644aa);
             continue;
         }
 
@@ -552,7 +552,7 @@ function updateBlackHoles(currentTime) {
                 killAISnake(ai, performance.now());
                 gameState.score += 80;
                 gameState.aiKills++;
-                showNotification(`黑洞吞噬 ${ai.color.name}！+80`, 0x6600ff);
+                showNotification(`Black Hole swallowed ${ai.color.name}! +80`, 0x6600ff);
                 updateScore();
             }
         });
@@ -565,7 +565,7 @@ function updateBlackHoles(currentTime) {
             const dz = bh.worldPos.z - headWorld.z;
             if (dx * dx + dz * dz <= 9) {
                 gameState.score += 200;
-                showNotification('征服黑洞！+200', 0xffd700);
+                showNotification('Conquered Black Hole! +200', 0xffd700);
                 updateScore();
                 scene.remove(bh.mesh);
                 gameState.blackHoles.splice(i, 1);
@@ -599,7 +599,7 @@ function updateBlackHoles(currentTime) {
 
 // 流星雨（优化版）
 function triggerMeteorShower() {
-    showNotification('☄️ 流星雨！', COSMIC_EVENTS.METEOR_SHOWER.color);
+    showNotification('☄️ Meteor Shower!', COSMIC_EVENTS.METEOR_SHOWER.color);
 
     // 减少流星数量（8-13 -> 4-6）
     const meteorCount = 4 + Math.floor(Math.random() * 3);
@@ -649,7 +649,7 @@ function triggerMeteorShower() {
 function triggerWormhole() {
     if (gameState.snake.length === 0) return;
 
-    showNotification('🌀 虫洞传送！', COSMIC_EVENTS.WORMHOLE.color);
+    showNotification('🌀 Wormhole!', COSMIC_EVENTS.WORMHOLE.color);
 
     const head = gameState.snake[0];
     const oldWorldPos = gridToWorld(head);
@@ -689,7 +689,7 @@ function triggerWormhole() {
         createWormholeEffect(newWorldPos, 0xff00ff);
 
         updateSnakeMeshes();
-        showNotification('传送完成！', 0x00ff00);
+        showNotification('Teleport complete!', 0x00ff00);
 
         // 传送奖励
         gameState.score += 50;
@@ -742,7 +742,7 @@ function createWormholeEffect(worldPos, color) {
 
 // 恒星祝福（优化版）
 function triggerStellarBlessing() {
-    showNotification('✨ 恒星祝福！+100', COSMIC_EVENTS.STELLAR_BLESSING.color);
+    showNotification('✨ Stellar Blessing! +100', COSMIC_EVENTS.STELLAR_BLESSING.color);
 
     gameState.score += 100;
     gameState.activeEffects.double_score = Date.now() + 10000;
@@ -779,12 +779,12 @@ function triggerStellarBlessing() {
         createParticle(new THREE.Vector3(worldPos.x, 3, worldPos.z), 0xffdd00, 10);
     }
 
-    setTimeout(() => showNotification('双倍积分 10秒！', 0xffdd00), 400);
+    setTimeout(() => showNotification('Double Score 10s!', 0xffdd00), 400);
 }
 
 // 宇宙风暴（优化版）
 function triggerCosmicStorm() {
-    showNotification('🌪️ 宇宙风暴！', COSMIC_EVENTS.COSMIC_STORM.color);
+    showNotification('🌪️ Cosmic Storm!', COSMIC_EVENTS.COSMIC_STORM.color);
 
     gameState.activeEffects.speed_boost = Date.now() + 6000;
 
@@ -823,7 +823,7 @@ function triggerCosmicStorm() {
         gameState.aiSnakes.forEach(ai => {
             ai.speed = CONFIG.aiSpeed + Math.random() * 60;
         });
-        showNotification('风暴平息', 0x8844ff);
+        showNotification('Storm subsided', 0x8844ff);
     }, 6000);
 }
 
@@ -969,7 +969,7 @@ function clearCosmicEvents() {
     cosmicEventParticles.length = 0;
 }
 
-// ==================== 地面网格 ====================
+// ==================== Ground Grid ====================
 function createGround() {
     const size = CONFIG.gridSize * CONFIG.cellSize;
 
@@ -1023,7 +1023,7 @@ function createGround() {
     });
 }
 
-// ==================== 龙的3D模型 ====================
+// ==================== Dragon 3D Model ====================
 const snakeMeshes = [];
 const dragonParts = { horns: [], spikes: [], tail: null };
 
@@ -1270,7 +1270,7 @@ function updateSnakeMeshes() {
     });
 }
 
-// ==================== AI蛇管理 ====================
+// ==================== AI Snake Management ====================
 function createAISnake(colorIndex) {
     const color = AI_COLORS[colorIndex % AI_COLORS.length];
 
@@ -1537,11 +1537,11 @@ function moveAISnake(aiSnake, currentTime) {
             const bonus = 30 + gameState.aiKills * 5;
             gameState.score += bonus;
             gameState.aiKills++;
-            showNotification(`${aiSnake.color.name} 撞到你死了! +${bonus}`, aiSnake.color.head);
+            showNotification(`${aiSnake.color.name} crashed into you! +${bonus}`, aiSnake.color.head);
 
             // 被动击杀鼓励
             if (Math.random() < 0.5) {
-                setTimeout(() => showNotification('太弱了！😎', 0xfbbf24), 300);
+                setTimeout(() => showNotification('Too easy! 😎', 0xfbbf24), 300);
             }
             updateScore();
             return;
@@ -1623,7 +1623,7 @@ function respawnAISnake(aiSnake) {
     aiSnake.alive = true;
 
     updateAISnakeMeshes(aiSnake);
-    showNotification(`${aiSnake.color.name} 复活了!`, aiSnake.color.head);
+    showNotification(`${aiSnake.color.name} respawned!`, aiSnake.color.head);
 }
 
 function clearAISnakes() {
@@ -1633,7 +1633,7 @@ function clearAISnakes() {
     gameState.aiSnakes = [];
 }
 
-// ==================== 食物 - 恒星 ====================
+// ==================== Food - Stars ====================
 // 创建恒星模型
 function createStarModel(isGolden) {
     const group = new THREE.Group();
@@ -1766,7 +1766,7 @@ function clearFoods() {
     gameState.foods = [];
 }
 
-// ==================== 障碍物 - 小行星 ====================
+// ==================== Obstacles - Asteroids ====================
 function createObstacles() {
     clearObstacles();
 
@@ -1837,7 +1837,7 @@ function clearObstacles() {
     gameState.obstacles = [];
 }
 
-// ==================== 道具系统 ====================
+// ==================== Power-up System ====================
 function getWeightedRandomPowerUp() {
     const types = Object.values(POWER_UP_TYPES);
     const totalWeight = types.reduce((sum, t) => sum + t.weight, 0);
@@ -1929,7 +1929,7 @@ function collectPowerUp(powerUp) {
             break;
         case 'fire_breath':
             gameState.activeEffects.fire_breath = Date.now() + CONFIG.powerUpDuration;
-            showNotification('燃烧吧！🔥', 0xff4500);
+            showNotification('Burn! 🔥', 0xff4500);
             break;
         case 'shield':
             // 护盾：获得短暂无敌+额外分数
@@ -1939,7 +1939,7 @@ function collectPowerUp(powerUp) {
         case 'bonus':
             // 奖励：直接获得大量分数
             bonusPoints = 50 + Math.floor(Math.random() * 50);
-            showNotification(`+${bonusPoints}分！🎁`, 0x10b981);
+            showNotification(`+${bonusPoints} pts! 🎁`, 0x10b981);
             break;
         case 'reverse':
             gameState.activeEffects.reverse = Date.now() + CONFIG.powerUpDuration / 2; // 减少反转时间
@@ -1950,7 +1950,7 @@ function collectPowerUp(powerUp) {
                 return;
             } else {
                 bonusPoints = 30; // 无敌状态下吃炸弹得分
-                showNotification('炸弹被挡住了！💪', 0x22c55e);
+                showNotification('Bomb blocked! 💪', 0x22c55e);
             }
             break;
     }
@@ -2012,7 +2012,7 @@ function updateEffects() {
     updateEffectsUI();
 }
 
-// ==================== 通知系统 ====================
+// ==================== Notification System ====================
 function showNotification(text, color) {
     const notif = document.createElement('div');
     notif.className = 'notification';
@@ -2028,14 +2028,14 @@ function updateEffectsUI() {
     container.innerHTML = '';
 
     const effects = [
-        { key: 'speed_boost', icon: '⚡', name: '加速' },
-        { key: 'slow_mo', icon: '🐢', name: '减速' },
-        { key: 'invincible', icon: '⭐', name: '无敌' },
-        { key: 'double_score', icon: '✖2', name: '双倍' },
-        { key: 'magnet', icon: '🧲', name: '磁铁' },
-        { key: 'fire_breath', icon: '🔥', name: '龙息' },
-        { key: 'shield', icon: '🛡️', name: '护盾' },
-        { key: 'reverse', icon: '🔄', name: '反转' },
+        { key: 'speed_boost', icon: '⚡', name: 'Speed' },
+        { key: 'slow_mo', icon: '🐢', name: 'Slow' },
+        { key: 'invincible', icon: '⭐', name: 'Invincible' },
+        { key: 'double_score', icon: '✖2', name: 'Double' },
+        { key: 'magnet', icon: '🧲', name: 'Magnet' },
+        { key: 'fire_breath', icon: '🔥', name: 'Fire' },
+        { key: 'shield', icon: '🛡️', name: 'Shield' },
+        { key: 'reverse', icon: '🔄', name: 'Reverse' },
     ];
 
     effects.forEach(e => {
@@ -2049,7 +2049,7 @@ function updateEffectsUI() {
     });
 }
 
-// ==================== 游戏逻辑 ====================
+// ==================== Game Logic ====================
 function initGame() {
     gameState.snake = [
         { x: 50, y: 0, z: 50 },
@@ -2140,7 +2140,7 @@ function moveSnake() {
                 killAISnake(ai, performance.now());
                 gameState.score += 50;
                 gameState.aiKills++;
-                showNotification(`龙息击杀 ${ai.color.name}! +50`, 0xff4400);
+                showNotification(`Fire killed ${ai.color.name}! +50`, 0xff4400);
                 updateScore();
             }
         });
@@ -2181,21 +2181,21 @@ function moveSnake() {
             );
 
             if (gameState.combo > 0) {
-                showNotification(`连击 x${gameState.combo}!`, 0x22d3ee);
+                showNotification(`Combo x${gameState.combo}!`, 0x22d3ee);
                 if (gameState.combo >= 5) {
-                    showNotification('连击大师！🔥', 0xff6600);
+                    showNotification('Combo Master! 🔥', 0xff6600);
                 }
             }
 
-            // 里程碑鼓励
+            // Milestone encouragement
             if (gameState.foodEaten === 10) {
-                showNotification('10个食物！继续加油！💪', 0x22c55e);
+                showNotification('10 stars! Keep going! 💪', 0x22c55e);
             } else if (gameState.foodEaten === 25) {
-                showNotification('25个！你太强了！🌟', 0xfbbf24);
+                showNotification('25! Amazing! 🌟', 0xfbbf24);
             } else if (gameState.foodEaten === 50) {
-                showNotification('50个！传说级玩家！👑', 0xff6600);
+                showNotification('50! Legendary! 👑', 0xff6600);
             } else if (gameState.foodEaten % 25 === 0 && gameState.foodEaten > 50) {
-                showNotification(`${gameState.foodEaten}个！无人能挡！🐉`, 0xff4500);
+                showNotification(`${gameState.foodEaten}! Unstoppable! 🐉`, 0xff4500);
             }
 
             // 随机鼓励
@@ -2234,15 +2234,15 @@ function moveSnake() {
                     const bonus = 50 + gameState.aiKills * 10; // 连续击杀奖励更多！
                     gameState.score += bonus;
                     gameState.aiKills++;
-                    showNotification(`击杀 ${ai.color.name}! +${bonus}`, ai.color.head);
+                    showNotification(`Killed ${ai.color.name}! +${bonus}`, ai.color.head);
 
-                    // 击杀鼓励
+                    // Kill encouragement
                     if (gameState.aiKills === 1) {
-                        setTimeout(() => showNotification('首杀！🎯', 0xff6600), 400);
+                        setTimeout(() => showNotification('First Blood! 🎯', 0xff6600), 400);
                     } else if (gameState.aiKills === 3) {
-                        setTimeout(() => showNotification('三杀！屠龙者！🗡️', 0xff4500), 400);
+                        setTimeout(() => showNotification('Triple Kill! Dragon Slayer! 🗡️', 0xff4500), 400);
                     } else if (gameState.aiKills >= 5) {
-                        setTimeout(() => showNotification('超神！无人能挡！👑', 0xffd700), 400);
+                        setTimeout(() => showNotification('Godlike! Unstoppable! 👑', 0xffd700), 400);
                     }
 
                     updateScore();
@@ -2290,9 +2290,9 @@ function checkCollision(pos) {
 }
 
 function updateScore() {
-    document.getElementById('score').textContent = `分数: ${gameState.score}`;
+    document.getElementById('score').textContent = `Score: ${gameState.score}`;
     if (gameState.combo > 0) {
-        document.getElementById('combo').textContent = `连击: x${gameState.combo}`;
+        document.getElementById('combo').textContent = `Combo: x${gameState.combo}`;
         document.getElementById('combo').classList.remove('hidden');
     } else {
         document.getElementById('combo').classList.add('hidden');
@@ -2316,7 +2316,7 @@ function startGame() {
     gameState.isRunning = true;
 }
 
-// ==================== 输入处理 ====================
+// ==================== Input Handling ====================
 document.addEventListener('keydown', (e) => {
     if (!gameState.isRunning) return;
 
@@ -2357,18 +2357,18 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// ==================== UI 事件 ====================
+// ==================== UI Events ====================
 document.getElementById('start-btn').addEventListener('click', startGame);
 document.getElementById('restart-btn').addEventListener('click', startGame);
 
-// ==================== 窗口大小调整 ====================
+// ==================== Window Resize ====================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// ==================== 摄像机跟随 ====================
+// ==================== Camera Follow ====================
 const cameraTarget = new THREE.Vector3(0, 0, 0);
 const cameraOffset = new THREE.Vector3(0, 45, 35);
 
@@ -2388,7 +2388,7 @@ function updateCamera() {
     }
 }
 
-// ==================== 游戏主循环 ====================
+// ==================== Game Main Loop ====================
 function animate(currentTime) {
     requestAnimationFrame(animate);
 
@@ -2488,7 +2488,7 @@ function animate(currentTime) {
     renderer.render(scene, camera);
 }
 
-// ==================== 初始化 ====================
+// ==================== Initialization ====================
 createGround();
 initGame();
 animate(0);
