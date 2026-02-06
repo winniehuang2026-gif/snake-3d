@@ -1,0 +1,9 @@
+{
+  "name": "snake-3d",
+  "version": "1.0.0",
+  "description": "3D贪吃蛇游戏",
+  "scripts": {
+    "dev": "npx serve ."
+  },
+  "dependencies": {}
+}

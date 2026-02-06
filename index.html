@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星际龙神 - 3D Cosmic Dragon</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="ui">
+        <div id="score">分数: 0</div>
+        <div id="combo" class="hidden">连击: x0</div>
+        <div id="active-effects"></div>
+        <div id="notifications"></div>
+
+        <div id="game-over" class="hidden">
+            <h2>游戏结束!</h2>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">最终分数</span>
+                    <span class="stat-value" id="final-score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">吃掉食物</span>
+                    <span class="stat-value" id="final-food">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">最大长度</span>
+                    <span class="stat-value" id="final-length">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">收集道具</span>
+                    <span class="stat-value" id="final-powerups">0</span>
+                </div>
+                <div class="stat-item highlight">
+                    <span class="stat-label">击杀敌龙</span>
+                    <span class="stat-value" id="final-kills">0</span>
+                </div>
+            </div>
+            <button id="restart-btn">重新开始</button>
+        </div>
+
+        <div id="start-screen">
+            <h1>🐉 星际龙神 🌟</h1>
+            <p class="subtitle">3D Cosmic Dragon</p>
+            <p>使用 WASD 或方向键控制你的星际巨龙</p>
+
+            <div class="info-section">
+                <div class="info-box">
+                    <h3>🌌 宇宙战场 · 100x100 星域</h3>
+                    <div class="ai-list">
+                        <span class="ai-item red">红龙</span>
+                        <span class="ai-item purple">紫龙</span>
+                        <span class="ai-item cyan">冰龙</span>
+                        <span class="ai-item gold">金龙</span>
+                    </div>
+                    <p class="tip">收集恒星获得能量 · 击败其他星龙！🎉</p>
+                </div>
+
+                <div class="info-box">
+                    <h3>宇宙道具等你拿！</h3>
+                    <div class="powerup-list">
+                        <span class="powerup-item">⚡ 加速</span>
+                        <span class="powerup-item">🐢 减速</span>
+                        <span class="powerup-item star">⭐ 无敌</span>
+                        <span class="powerup-item">✖2 双倍</span>
+                        <span class="powerup-item">📉 缩身</span>
+                        <span class="powerup-item">🧲 磁铁</span>
+                        <span class="powerup-item fire">🔥 龙息</span>
+                        <span class="powerup-item shield">🛡️ 护盾</span>
+                        <span class="powerup-item bonus">🎁 奖励</span>
+                    </div>
+                    <p class="tip">恒星能量充足！小行星要避开！💪</p>
+                </div>
+
+                <div class="info-box">
+                    <h3>🌌 随机宇宙事件！</h3>
+                    <div class="powerup-list">
+                        <span class="powerup-item fire">💥 超新星</span>
+                        <span class="powerup-item bad">🕳️ 黑洞</span>
+                        <span class="powerup-item">☄️ 流星雨</span>
+                        <span class="powerup-item shield">🌀 虫洞</span>
+                        <span class="powerup-item star">✨ 祝福</span>
+                        <span class="powerup-item bonus">🌪️ 风暴</span>
+                    </div>
+                    <p class="tip">宇宙事件随机发生，带来惊喜与挑战！🚀</p>
+                </div>
+            </div>
+
+            <button id="start-btn">开始冒险</button>
+        </div>
+    </div>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
