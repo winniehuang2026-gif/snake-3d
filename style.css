@@ -347,7 +347,7 @@ button:active {
     display: none !important;
 }
 
-/* 宇宙事件通知样式增强 */
+/* Cosmic event notification style enhancement */
 .notification {
     text-shadow: 0 0 15px currentColor, 0 0 30px currentColor, 2px 2px 4px rgba(0,0,0,0.8);
 }
