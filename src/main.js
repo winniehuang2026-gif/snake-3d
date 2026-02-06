@@ -1530,7 +1530,7 @@ function moveAISnake(aiSnake, currentTime) {
         aiSnake.segments.pop();
     }
 
-    // AI蛇碰到玩家就会死！玩家太强了！
+    // AI crashes into player - AI dies
     for (const seg of gameState.snake) {
         if (seg.x === newHead.x && seg.z === newHead.z) {
             killAISnake(aiSnake, currentTime);
@@ -1539,12 +1539,43 @@ function moveAISnake(aiSnake, currentTime) {
             gameState.aiKills++;
             showNotification(`${aiSnake.color.name} crashed into you! +${bonus}`, aiSnake.color.head);
 
-            // 被动击杀鼓励
             if (Math.random() < 0.5) {
                 setTimeout(() => showNotification('Too easy! 😎', 0xfbbf24), 300);
             }
             updateScore();
             return;
+        }
+    }
+
+    // AI vs AI combat - AIs can eat each other!
+    for (const otherAI of gameState.aiSnakes) {
+        if (otherAI === aiSnake || !otherAI.alive) continue;
+
+        // Check if this AI's head hits another AI's body
+        for (let i = 0; i < otherAI.segments.length; i++) {
+            const seg = otherAI.segments[i];
+            if (seg.x === newHead.x && seg.z === newHead.z) {
+                if (i === 0) {
+                    // Head-on collision: both die
+                    killAISnake(aiSnake, currentTime);
+                    killAISnake(otherAI, currentTime);
+                    showNotification(`${aiSnake.color.name} vs ${otherAI.color.name}! 💥`, 0xff4400);
+                } else {
+                    // This AI eats the other AI
+                    const segmentsToGrow = otherAI.segments.length;
+                    killAISnake(otherAI, currentTime);
+
+                    // Grow the attacking AI by adding segments
+                    for (let g = 0; g < Math.min(segmentsToGrow, 5); g++) {
+                        const tail = aiSnake.segments[aiSnake.segments.length - 1];
+                        aiSnake.segments.push({ x: tail.x, z: tail.z });
+                    }
+
+                    showNotification(`${aiSnake.color.name} devoured ${otherAI.color.name}! 🐉`, otherAI.color.head);
+                }
+                updateAISnakeMeshes(aiSnake);
+                return;
+            }
         }
     }
 
